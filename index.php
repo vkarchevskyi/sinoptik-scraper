@@ -12,7 +12,8 @@ header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers
 
 $city = $_REQUEST['city'] ?? 'Киев';
 $date = $_REQUEST['date'] ?? new DateTime();
+$onlyCurrentTime = !empty($_REQUEST['current-time']);
 
-$data = new HtmlParser($city, $date)->getData();
+$data = new HtmlParser($city, $date)->getData($onlyCurrentTime);
 
 echo json_encode($data);

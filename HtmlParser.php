@@ -9,6 +9,7 @@ class HtmlParser
 {
     private const string BASE_URL = 'https://sinoptik.ua';
     private const string DATE_FORMAT = 'Y-m-d';
+    private const string TIMEZONE = 'Europe/Kyiv';
 
     public string $city {
         set {
@@ -32,7 +33,7 @@ class HtmlParser
                 $this->date = $date;
             }
 
-            $this->date->setTimezone(new DateTimeZone('Europe/Kyiv'));
+            $this->date->setTimezone(new DateTimeZone(self::TIMEZONE));
         }
     }
 
@@ -46,16 +47,15 @@ class HtmlParser
     }
 
     /**
-     * @return array{time: string, data: array<string, string>}
+     * @return list<array{time: string, data: array<string, string>}>
      *
      * @throws Exception
      * @throws LogicException
      */
-    public function getData(): array
+    public function getData(bool $onlyCurrentTime = true): array
     {
-        $dom = $this->getHtmlDocumentObjectModel($this->getFullUrl());
-
         $data = [];
+        $dom = $this->getHtmlDocumentObjectModel($this->getFullUrl());
         $timeNodes = $dom->querySelectorAll('table > thead > tr:last-child > td');
 
         /** @var Element $timeNode */
@@ -81,7 +81,30 @@ class HtmlParser
             }
         }
 
-        return $data;
+        return $onlyCurrentTime ? $data[$this->getCurrentTimeIndex($data)] : $data;
+    }
+
+    /**
+     * @param list<array{time: string, data: array<string, string>}> $data
+     * @return int
+     */
+    private function getCurrentTimeIndex(array $data): int
+    {
+        $intervals = [];
+
+        foreach ($data as $dataPerTime) {
+            [$hours, $minutes] = explode(':', $dataPerTime['time']);
+
+            $dateTimeFromTime = new DateTime()
+                ->setTimezone(new DateTimeZone('Europe/Kyiv'))
+                ->setTime((int)$hours, (int)$minutes);
+
+            $intervals[] = abs($this->date->getTimestamp() - $dateTimeFromTime->getTimestamp());
+        }
+
+        asort($intervals);
+
+        return key($intervals);
     }
 
     /**
