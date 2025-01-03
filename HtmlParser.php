@@ -31,6 +31,8 @@ class HtmlParser
             } elseif ($date instanceof DateTime) {
                 $this->date = $date;
             }
+
+            $this->date->setTimezone(new DateTimeZone('Europe/Kyiv'));
         }
     }
 
