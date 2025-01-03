@@ -34,7 +34,7 @@ class HtmlParser
         }
     }
 
-    public function __construct(string $city = 'Киев', DateTime|string|null $date = null)
+    public function __construct(string $city, DateTime|string|null $date = null)
     {
         $this->city = $city;
 
