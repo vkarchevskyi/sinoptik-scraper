@@ -34,12 +34,14 @@ class SinoptikRepository
             throw new RuntimeException('Status is not successful. Current status: ' . $status);
         }
 
-        $html = gzdecode($html);
-        if ($html === false) {
-            throw new RuntimeException('Provided content is not a gzip encoded string');
+        $gzDecodedHtml = gzdecode($html);
+
+        // For some reason sinoptik.ua returns Gzip encoded HTML for Kyiv and raw HTML for other cities
+        if ($gzDecodedHtml === false) {
+            return $html;
         }
 
-        return $html;
+        return $gzDecodedHtml;
     }
 
     protected function getFullUrl(string $city, string $date): string
