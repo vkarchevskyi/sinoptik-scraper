@@ -15,7 +15,6 @@ use Vkarchevskyi\SinoptikUaParser\DataTransferObjects\WeatherPeriodData;
 readonly class Scraper
 {
     protected Repositories\SinoptikRepository $repository;
-    protected Services\NameByTableIndexService $nameByTableIndexService;
     protected Services\CurrentTimeIndexService $currentTimeIndexService;
 
     public function __construct(
@@ -24,7 +23,6 @@ readonly class Scraper
         protected string $dateFormat,
     ) {
         $this->repository = new Repositories\SinoptikRepository();
-        $this->nameByTableIndexService = new Services\NameByTableIndexService();
         $this->currentTimeIndexService = new Services\CurrentTimeIndexService();
     }
 
@@ -70,10 +68,9 @@ readonly class Scraper
 
             /** @var Element $weatherDataItem */
             foreach ($weatherNode->childNodes as $timeIndex => $weatherDataItem) {
-                $propertyName = $this->nameByTableIndexService->get($weatherDataIndex);
-                $propertyValue = $this->parsePropertyValueByTableIndex($weatherDataIndex, $weatherDataItem);
+                $value = $this->parsePropertyValueByTableIndex($weatherDataIndex, $weatherDataItem);
 
-                $data[$timeIndex]['data'][$propertyName] = $propertyValue;
+                $data[$timeIndex]['data'][$weatherDataIndex] = $value;
             }
         }
 
@@ -90,7 +87,7 @@ readonly class Scraper
     {
         $html = $this->repository->getHtml($this->city, $this->date->format($this->dateFormat));
 
-        return HTMLDocument::createFromString($html, LIBXML_NOERROR);
+        return HTMLDocument::createFromString($html);
     }
 
     protected function parsePropertyValueByTableIndex(int $index, Element $node): string
