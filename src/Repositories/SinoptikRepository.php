@@ -30,13 +30,13 @@ class SinoptikRepository
 
         curl_close($c);
 
-        if ($status !== 200 || is_bool($html)) {
+        if (200 !== $status || is_bool($html)) {
             throw new RuntimeException('Status is not successful. Current status: ' . $status);
         }
 
         $html = gzdecode($html);
         if (false === $html) {
-            throw new RuntimeException("Provided content is not a gzip encoded string");
+            throw new RuntimeException('Provided content is not a gzip encoded string');
         }
 
         return $html;
@@ -44,6 +44,6 @@ class SinoptikRepository
 
     protected function getFullUrl(string $city, string $date): string
     {
-        return sprintf("%s/%s/%s", self::BASE_URL, $city, $date);
+        return sprintf('%s/%s/%s', self::BASE_URL, $city, $date);
     }
 }
