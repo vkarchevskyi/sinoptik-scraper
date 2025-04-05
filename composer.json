@@ -5,7 +5,9 @@
     "require": {
         "php": "^8.4",
         "ext-dom": "*",
-        "ext-libxml": "*"
+        "ext-libxml": "*",
+        "ext-curl": "*",
+        "ext-zlib": "*"
     },
     "license": "MIT",
     "autoload": {
