@@ -3,6 +3,7 @@
     "description": "Parser of sinoptik.ua website",
     "type": "library",
     "require": {
+        "php": "^8.4",
         "ext-dom": "*"
     },
     "license": "MIT",
