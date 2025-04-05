@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/vendor/autoload.php';
+use Vkarchevskyi\SinoptikUaParser\Factories\ScraperFactory;
 
-use Vkarchevskyi\SinoptikUaParser\ScraperFactory;
+require_once __DIR__ . '/vendor/autoload.php';
 
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");

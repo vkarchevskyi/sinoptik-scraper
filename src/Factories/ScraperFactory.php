@@ -2,12 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Vkarchevskyi\SinoptikUaParser;
+namespace Vkarchevskyi\SinoptikUaParser\Factories;
 
 use DateInvalidTimeZoneException;
 use DateTimeImmutable;
 use DateTimeZone;
 use LogicException;
+use Vkarchevskyi\SinoptikUaParser\Scraper;
 
 class ScraperFactory
 {
