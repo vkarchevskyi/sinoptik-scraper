@@ -136,12 +136,15 @@ class HtmlParser
         curl_close($c);
 
         if ($status !== 200) {
-            throw new RuntimeException('Status is not successful');
+            throw new RuntimeException('Status is not successful. Current status: ' . $status);
         }
 
-        var_dump($html);
+        $html = gzdecode($html);
+        if (false === $html) {
+            throw new RuntimeException("Provided content is not a gzip encoded string");
+        }
 
-        return HTMLDocument::createFromString(gzdecode($html), LIBXML_NOERROR);
+        return HTMLDocument::createFromString($html, LIBXML_NOERROR);
     }
 
     protected function getFullUrl(): string
