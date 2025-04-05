@@ -1,0 +1,20 @@
+{
+    "name": "vkarchevskyi/sinoptik.ua-parser",
+    "description": "Parser of sinoptik.ua website",
+    "type": "library",
+    "require": {
+        "ext-dom": "*"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Vkarchevskyi\\SinoptikUaParser\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "vkarchevskyi",
+            "email": "vharchevskyi10@gmail.com"
+        }
+    ]
+}
