@@ -19,29 +19,34 @@ class SinoptikRepository
 
         $c = curl_init($url);
         curl_setopt($c, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($c, CURLOPT_HEADER, 1);
 
-        $html = curl_exec($c);
-
+        $response = curl_exec($c);
         if (curl_error($c)) {
             throw new RuntimeException(curl_error($c));
         }
 
         $status = curl_getinfo($c, CURLINFO_HTTP_CODE);
-
-        curl_close($c);
-
-        if ($status !== 200 || is_bool($html)) {
+        if ($status !== 200 || is_bool($response)) {
             throw new RuntimeException('Status is not successful. Current status: ' . $status);
         }
 
-        $gzDecodedHtml = gzdecode($html);
+        $headerSize = curl_getinfo($c, CURLINFO_HEADER_SIZE);
+        $headers = substr($response, 0, $headerSize);
+        $html = substr($response, $headerSize);
 
-        // For some reason sinoptik.ua returns Gzip encoded HTML for Kyiv and raw HTML for other cities
-        if ($gzDecodedHtml === false) {
+        curl_close($c);
+
+        if (stripos($headers, 'Content-Encoding: gzip') === false) {
             return $html;
         }
 
-        return $gzDecodedHtml;
+        $html = gzdecode($html);
+        if ($html === false) {
+            throw new RuntimeException('Provided content is not a gzip encoded string');
+        }
+
+        return $html;
     }
 
     protected function getFullUrl(string $city, string $date): string
