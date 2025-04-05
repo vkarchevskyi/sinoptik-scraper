@@ -10,6 +10,7 @@ use Dom\HTMLDocument;
 use Exception;
 use LogicException;
 use RuntimeException;
+use Vkarchevskyi\SinoptikUaParser\DataTransferObjects\WeatherData;
 use Vkarchevskyi\SinoptikUaParser\DataTransferObjects\WeatherPeriodData;
 
 readonly class Scraper
@@ -75,7 +76,10 @@ readonly class Scraper
         }
 
         return array_map(
-            static fn (array $item): WeatherPeriodData => new WeatherPeriodData($item['time'], $item['data']),
+            static fn (array $item): WeatherPeriodData => new WeatherPeriodData(
+                $item['time'],
+                new WeatherData(...$item['data']),
+            ),
             $data
         );
     }
