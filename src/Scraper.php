@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Vkarchevskyi\SinoptikUaParser;
 
 use DateTimeImmutable;
-use DateTimeZone;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Exception;
@@ -15,24 +14,15 @@ use Vkarchevskyi\SinoptikUaParser\DataTransferObjects\WeatherData;
 
 readonly class Scraper
 {
-    protected const string DATE_FORMAT = 'Y-m-d';
-    protected const string TIMEZONE = 'Europe/Kyiv';
+    protected Repositories\SinoptikRepository $repository;
+    protected Services\NameByTableIndexService $nameByTableIndexService;
+    protected Services\CurrentTimeIndexService $currentTimeIndexService;
 
-    protected private(set) Repositories\SinoptikRepository $repository;
-    protected private(set) Services\NameByTableIndexService $nameByTableIndexService;
-    protected private(set) Services\CurrentTimeIndexService $currentTimeIndexService;
-
-    protected private(set) string $city;
-    protected private(set) DateTimeImmutable $date;
-
-    public function __construct(string $city, DateTimeImmutable|string|null $date = null)
-    {
-        $this->setCity($city);
-
-        if (!empty($date)) {
-            $this->setDate($date);
-        }
-
+    public function __construct(
+        protected string $city,
+        protected DateTimeImmutable $date,
+        protected string $dateFormat,
+    ) {
         $this->repository = new Repositories\SinoptikRepository();
         $this->nameByTableIndexService = new Services\NameByTableIndexService();
         $this->currentTimeIndexService = new Services\CurrentTimeIndexService();
@@ -87,31 +77,10 @@ readonly class Scraper
             }
         }
 
-        return array_map(static fn (array $item): WeatherData => new WeatherData($item['time'], $item['data']), $data);
-    }
-
-    public function setCity(string $value): void
-    {
-        if (empty($value)) {
-            throw new LogicException('The city must not be empty');
-        }
-
-        $this->city = mb_strtolower($value);
-    }
-
-    public function setDate(DateTimeImmutable|string $date): void
-    {
-        if (is_string($date)) {
-            if (!$newDate = DateTimeImmutable::createFromFormat(self::DATE_FORMAT, $date)) {
-                throw new LogicException('Incorrect date format. The format must be "' . self::DATE_FORMAT . '".');
-            }
-
-            $this->date = $newDate;
-        } elseif ($date instanceof DateTimeImmutable) {
-            $this->date = $date;
-        }
-
-        $this->date->setTimezone(new DateTimeZone(self::TIMEZONE));
+        return array_map(
+            static fn (array $item): WeatherData => new WeatherData($item['time'], $item['data']),
+            $data
+        );
     }
 
     /**
@@ -119,7 +88,7 @@ readonly class Scraper
      */
     protected function getHtmlDocumentObjectModel(): HTMLDocument
     {
-        $html = $this->repository->getHtml($this->city, $this->date->format(self::DATE_FORMAT));
+        $html = $this->repository->getHtml($this->city, $this->date->format($this->dateFormat));
 
         return HTMLDocument::createFromString($html, LIBXML_NOERROR);
     }
