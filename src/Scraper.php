@@ -13,7 +13,7 @@ use LogicException;
 use RuntimeException;
 use Vkarchevskyi\SinoptikUaParser\DataTransferObjects\WeatherData;
 
-class HtmlParser
+readonly class Scraper
 {
     protected const string DATE_FORMAT = 'Y-m-d';
     protected const string TIMEZONE = 'Europe/Kyiv';
