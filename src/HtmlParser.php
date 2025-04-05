@@ -2,47 +2,33 @@
 
 declare(strict_types=1);
 
+namespace Vkarchevskyi\SinoptikUaParser;
+
+use DateTime;
+use DateTimeImmutable;
+use DateTimeInterface;
+use DateTimeZone;
 use Dom\Element;
 use Dom\HTMLDocument;
+use Exception;
+use LogicException;
+use RuntimeException;
 
 class HtmlParser
 {
-    private const string BASE_URL = 'https://sinoptik.ua';
-    private const string DATE_FORMAT = 'Y-m-d';
-    private const string TIMEZONE = 'Europe/Kyiv';
+    protected const string BASE_URL = 'https://sinoptik.ua/pohoda';
+    protected const string DATE_FORMAT = 'Y-m-d';
+    protected const string TIMEZONE = 'Europe/Kyiv';
 
-    public string $city {
-        set {
-            if (empty($value)) {
-                throw new LogicException('The city must not be empty');
-            }
-
-            $this->city = mb_strtolower($value);
-        }
-    }
-
-    public DateTime $date {
-        set(DateTime|string $date) {
-            if (is_string($date)) {
-                if (!$newDate = DateTime::createFromFormat(self::DATE_FORMAT, $date)) {
-                    throw new LogicException('Incorrect date format. The format must be "' . self::DATE_FORMAT . '".');
-                }
-
-                $this->date = $newDate;
-            } elseif ($date instanceof DateTime) {
-                $this->date = $date;
-            }
-
-            $this->date->setTimezone(new DateTimeZone(self::TIMEZONE));
-        }
-    }
+    protected string $city;
+    protected DateTimeInterface $date;
 
     public function __construct(string $city, DateTime|string|null $date = null)
     {
-        $this->city = $city;
+        $this->setCity($city);
 
         if (!empty($date)) {
-            $this->date = $date;
+            $this->setDate($date);
         }
     }
 
@@ -84,11 +70,35 @@ class HtmlParser
         return $onlyCurrentTime ? $data[$this->getCurrentTimeIndex($data)] : $data;
     }
 
+    public function setCity(string $value): void
+    {
+        if (empty($value)) {
+            throw new LogicException('The city must not be empty');
+        }
+
+        $this->city = mb_strtolower($value);
+    }
+
+    public function setDate(DateTimeInterface|string $date): void
+    {
+        if (is_string($date)) {
+            if (!$newDate = DateTimeImmutable::createFromFormat(self::DATE_FORMAT, $date)) {
+                throw new LogicException('Incorrect date format. The format must be "' . self::DATE_FORMAT . '".');
+            }
+
+            $this->date = $newDate;
+        } elseif ($date instanceof DateTimeInterface) {
+            $this->date = $date;
+        }
+
+        $this->date->setTimezone(new DateTimeZone(self::TIMEZONE));
+    }
+
     /**
      * @param list<array{time: string, data: array<string, string>}> $data
      * @return int
      */
-    private function getCurrentTimeIndex(array $data): int
+    protected function getCurrentTimeIndex(array $data): int
     {
         $intervals = [];
 
@@ -110,7 +120,7 @@ class HtmlParser
     /**
      * @throws Exception
      */
-    private function getHtmlDocumentObjectModel(string $url): HTMLDocument
+    protected function getHtmlDocumentObjectModel(string $url): HTMLDocument
     {
         $c = curl_init($url);
         curl_setopt($c, CURLOPT_RETURNTRANSFER, true);
@@ -118,7 +128,7 @@ class HtmlParser
         $html = curl_exec($c);
 
         if (curl_error($c)) {
-            throw new Exception(curl_error($c));
+            throw new RuntimeException(curl_error($c));
         }
 
         $status = curl_getinfo($c, CURLINFO_HTTP_CODE);
@@ -126,23 +136,25 @@ class HtmlParser
         curl_close($c);
 
         if ($status !== 200) {
-            throw new LogicException('Status is not successful');
+            throw new RuntimeException('Status is not successful');
         }
 
-        return Dom\HTMLDocument::createFromString($html, LIBXML_NOERROR);
+        var_dump($html);
+
+        return HTMLDocument::createFromString(gzdecode($html), LIBXML_NOERROR);
     }
 
-    private function getFullUrl(): string
+    protected function getFullUrl(): string
     {
         return sprintf(
-            "%s/погода-%s/%s",
+            "%s/%s/%s",
             self::BASE_URL,
             $this->city,
             $this->date->format(self::DATE_FORMAT)
         );
     }
 
-    private function getNameByTableIndex(int $index): string
+    protected function getNameByTableIndex(int $index): string
     {
         return match ($index) {
             0 => 'Picture',
@@ -155,7 +167,7 @@ class HtmlParser
         };
     }
 
-    private function parsePropertyValueByTableIndex(int $index, Element $node): string
+    protected function parsePropertyValueByTableIndex(int $index, Element $node): string
     {
         $value = $index === 5 ? $node->textContent : $node->innerHTML;
 
