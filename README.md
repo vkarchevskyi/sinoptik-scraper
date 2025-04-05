@@ -51,7 +51,7 @@ $data = new ScraperFactory()
     ->setDate(new DateTimeImmutable('+3 days'))
     ->setTimezone('Europe/Kyiv')
     ->make()
-    ->getCurrentTimeData()
+    ->getData()
 
 echo json_encode($data);
 ```
