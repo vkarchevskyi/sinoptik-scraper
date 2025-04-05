@@ -3,3 +3,4 @@
 .DS_STORE
 
 /vendor/
+.php-cs-fixer.cache
