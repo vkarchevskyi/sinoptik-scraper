@@ -4,44 +4,64 @@ declare(strict_types=1);
 
 namespace Vkarchevskyi\SinoptikUaParser;
 
-use DateTime;
 use DateTimeImmutable;
-use DateTimeInterface;
 use DateTimeZone;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Exception;
 use LogicException;
 use RuntimeException;
+use Vkarchevskyi\SinoptikUaParser\DataTransferObjects\WeatherData;
 
 class HtmlParser
 {
-    protected const string BASE_URL = 'https://sinoptik.ua/pohoda';
     protected const string DATE_FORMAT = 'Y-m-d';
     protected const string TIMEZONE = 'Europe/Kyiv';
 
-    protected string $city;
-    protected DateTimeInterface $date;
+    protected private(set) Repositories\SinoptikRepository $repository;
+    protected private(set) Services\NameByTableIndexService $nameByTableIndexService;
+    protected private(set) Services\CurrentTimeIndexService $currentTimeIndexService;
 
-    public function __construct(string $city, DateTime|string|null $date = null)
+    protected private(set) string $city;
+    protected private(set) DateTimeImmutable $date;
+
+    public function __construct(string $city, DateTimeImmutable|string|null $date = null)
     {
         $this->setCity($city);
 
         if (!empty($date)) {
             $this->setDate($date);
         }
+
+        $this->repository = new Repositories\SinoptikRepository();
+        $this->nameByTableIndexService = new Services\NameByTableIndexService();
+        $this->currentTimeIndexService = new Services\CurrentTimeIndexService();
     }
 
     /**
-     * @return list<array{time: string, data: array<string, string>}>
+     * @throws Exception
+     * @throws LogicException
+     * @throws RuntimeException
+     */
+    public function getCurrentTimeData(): WeatherData
+    {
+        $data = $this->getData();
+
+        return $data[$this->currentTimeIndexService->get($data, $this->date)];
+    }
+
+    /**
+     * @return list<WeatherData>
      *
      * @throws Exception
      * @throws LogicException
+     * @throws RuntimeException
      */
-    public function getData(bool $onlyCurrentTime = true): array
+    public function getData(): array
     {
         $data = [];
-        $dom = $this->getHtmlDocumentObjectModel($this->getFullUrl());
+
+        $dom = $this->getHtmlDocumentObjectModel();
         $timeNodes = $dom->querySelectorAll('table > thead > tr:last-child > td');
 
         /** @var Element $timeNode */
@@ -60,14 +80,14 @@ class HtmlParser
 
             /** @var Element $weatherDataItem */
             foreach ($weatherNode->childNodes as $timeIndex => $weatherDataItem) {
-                $propertyName = $this->getNameByTableIndex($weatherDataIndex);
+                $propertyName = $this->nameByTableIndexService->get($weatherDataIndex);
                 $propertyValue = $this->parsePropertyValueByTableIndex($weatherDataIndex, $weatherDataItem);
 
                 $data[$timeIndex]['data'][$propertyName] = $propertyValue;
             }
         }
 
-        return $onlyCurrentTime ? $data[$this->getCurrentTimeIndex($data)] : $data;
+        return array_map(static fn (array $item): WeatherData => new WeatherData($item['time'], $item['data']), $data);
     }
 
     public function setCity(string $value): void
@@ -79,7 +99,7 @@ class HtmlParser
         $this->city = mb_strtolower($value);
     }
 
-    public function setDate(DateTimeInterface|string $date): void
+    public function setDate(DateTimeImmutable|string $date): void
     {
         if (is_string($date)) {
             if (!$newDate = DateTimeImmutable::createFromFormat(self::DATE_FORMAT, $date)) {
@@ -87,7 +107,7 @@ class HtmlParser
             }
 
             $this->date = $newDate;
-        } elseif ($date instanceof DateTimeInterface) {
+        } elseif ($date instanceof DateTimeImmutable) {
             $this->date = $date;
         }
 
@@ -95,79 +115,13 @@ class HtmlParser
     }
 
     /**
-     * @param list<array{time: string, data: array<string, string>}> $data
-     * @return int
-     */
-    protected function getCurrentTimeIndex(array $data): int
-    {
-        $intervals = [];
-
-        foreach ($data as $dataPerTime) {
-            [$hours, $minutes] = explode(':', $dataPerTime['time']);
-
-            $dateTimeFromTime = new DateTime()
-                ->setTimezone(new DateTimeZone('Europe/Kyiv'))
-                ->setTime((int)$hours, (int)$minutes);
-
-            $intervals[] = abs($this->date->getTimestamp() - $dateTimeFromTime->getTimestamp());
-        }
-
-        asort($intervals);
-
-        return key($intervals);
-    }
-
-    /**
      * @throws Exception
      */
-    protected function getHtmlDocumentObjectModel(string $url): HTMLDocument
+    protected function getHtmlDocumentObjectModel(): HTMLDocument
     {
-        $c = curl_init($url);
-        curl_setopt($c, CURLOPT_RETURNTRANSFER, true);
-
-        $html = curl_exec($c);
-
-        if (curl_error($c)) {
-            throw new RuntimeException(curl_error($c));
-        }
-
-        $status = curl_getinfo($c, CURLINFO_HTTP_CODE);
-
-        curl_close($c);
-
-        if ($status !== 200) {
-            throw new RuntimeException('Status is not successful. Current status: ' . $status);
-        }
-
-        $html = gzdecode($html);
-        if (false === $html) {
-            throw new RuntimeException("Provided content is not a gzip encoded string");
-        }
+        $html = $this->repository->getHtml($this->city, $this->date->format(self::DATE_FORMAT));
 
         return HTMLDocument::createFromString($html, LIBXML_NOERROR);
-    }
-
-    protected function getFullUrl(): string
-    {
-        return sprintf(
-            "%s/%s/%s",
-            self::BASE_URL,
-            $this->city,
-            $this->date->format(self::DATE_FORMAT)
-        );
-    }
-
-    protected function getNameByTableIndex(int $index): string
-    {
-        return match ($index) {
-            0 => 'Picture',
-            1 => 'Temperature',
-            2 => 'Feels like',
-            3 => 'Pressure',
-            4 => 'Humidity',
-            5 => 'Wind (m/s)',
-            6 => 'Probability of Precipitation',
-        };
     }
 
     protected function parsePropertyValueByTableIndex(int $index, Element $node): string
