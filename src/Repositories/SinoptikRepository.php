@@ -30,12 +30,12 @@ class SinoptikRepository
 
         curl_close($c);
 
-        if (200 !== $status || is_bool($html)) {
+        if ($status !== 200 || is_bool($html)) {
             throw new RuntimeException('Status is not successful. Current status: ' . $status);
         }
 
         $html = gzdecode($html);
-        if (false === $html) {
+        if ($html === false) {
             throw new RuntimeException('Provided content is not a gzip encoded string');
         }
 

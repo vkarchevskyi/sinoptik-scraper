@@ -74,9 +74,9 @@ return new PhpCsFixer\Config()
         'single_blank_line_at_eof' => true,
 
         'yoda_style' => [
-            'always_move_variable' => true,
-            'equal' => true,
-            'identical' => true,
+            'always_move_variable' => false,
+            'equal' => false,
+            'identical' => false,
         ],
         'fully_qualified_strict_types' => true,
         'global_namespace_import' => [
