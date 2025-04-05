@@ -17,5 +17,11 @@
             "name": "vkarchevskyi",
             "email": "vharchevskyi10@gmail.com"
         }
-    ]
+    ],
+    "require-dev": {
+        "phpstan/phpstan": "^2.1"
+    },
+    "scripts": {
+        "phpstan": "./vendor/bin/phpstan analyze -l 10 src"
+    }
 }
