@@ -23,6 +23,7 @@
         "friendsofphp/php-cs-fixer": "^3.75"
     },
     "scripts": {
-        "phpstan": "./vendor/bin/phpstan analyze -l 10 src"
+        "phpstan": "./vendor/bin/phpstan analyze -l 10 src",
+        "fixer": "PHP_CS_FIXER_IGNORE_ENV=on ./vendor/bin/php-cs-fixer fix src"
     }
 }
