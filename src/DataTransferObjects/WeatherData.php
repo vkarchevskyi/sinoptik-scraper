@@ -7,6 +7,7 @@ namespace Vkarchevskyi\SinoptikUaParser\DataTransferObjects;
 readonly class WeatherData
 {
     public function __construct(
+        public string $description,
         public string $temperature,
         public string $feelsLike,
         public string $pressure,

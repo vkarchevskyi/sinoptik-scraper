@@ -33,6 +33,7 @@ Example output:
 {
   "time": "15:00",
   "data": {
+    "description": "Ясно",
     "temperature": "+12",
     "feelsLike": "+12",
     "pressure": "734",
@@ -63,6 +64,7 @@ Example output:
   {
     "time": "3:00",
     "data": {
+      "description": "Невеликі високі хмари",
       "temperature": "-3",
       "feelsLike": "-3",
       "pressure": "741",
@@ -74,6 +76,7 @@ Example output:
   {
     "time": "9:00",
     "data": {
+      "description": "Хмарно з проясненнями",
       "temperature": "0",
       "feelsLike": "-3",
       "pressure": "740",
@@ -85,6 +88,7 @@ Example output:
   {
     "time": "15:00",
     "data": {
+      "description": "Суцільна хмарність",
       "temperature": "+4",
       "feelsLike": "+1",
       "pressure": "740",
@@ -96,6 +100,7 @@ Example output:
   {
     "time": "21:00",
     "data": {
+      "description": "Невелика хмарність",
       "temperature": "+1",
       "feelsLike": "-1",
       "pressure": "742",

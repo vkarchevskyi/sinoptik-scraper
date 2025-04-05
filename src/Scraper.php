@@ -62,11 +62,6 @@ readonly class Scraper
 
         /** @var Element $weatherNode */
         foreach ($weatherNodes as $weatherDataIndex => $weatherNode) {
-            // Skip pictures of weather
-            if ($weatherDataIndex === 0) {
-                continue;
-            }
-
             /** @var Element $weatherDataItem */
             foreach ($weatherNode->childNodes as $timeIndex => $weatherDataItem) {
                 $value = $this->parsePropertyValueByTableIndex($weatherDataIndex, $weatherDataItem);
@@ -96,14 +91,17 @@ readonly class Scraper
 
     protected function parsePropertyValueByTableIndex(int $index, Element $node): string
     {
-        $value = $index === 5 ? $node->textContent : $node->innerHTML;
+        $value = match ($index) {
+            0 => $node->querySelector('div[aria-label]')->getAttributeNode('aria-label')->textContent,
+            5 => $node->textContent,
+            default => $node->innerHTML
+        };
 
         if (is_null($value)) {
             throw new RuntimeException("Node with id $node->id must contain textContent");
         }
 
         return match ($index) {
-            0 => '', // Remove data about weather picture
             1, 2 => mb_substr($value, 0, mb_strlen($value) - 1), // Remove degree sign
             6 => $value === '-' ? '0' : $value, // Replace '-' sign with 0 (0% probability of precipitation)
             default => $value,
