@@ -7,12 +7,12 @@ namespace Vkarchevskyi\SinoptikUaParser\Services;
 use DateTimeImmutable;
 use DateTimeZone;
 use RuntimeException;
-use Vkarchevskyi\SinoptikUaParser\DataTransferObjects\WeatherData;
+use Vkarchevskyi\SinoptikUaParser\DataTransferObjects\WeatherPeriodData;
 
 class CurrentTimeIndexService
 {
     /**
-     * @param array<int, WeatherData> $data
+     * @param array<int, WeatherPeriodData> $data
      *
      * @throws RuntimeException
      */

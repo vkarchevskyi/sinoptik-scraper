@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Vkarchevskyi\SinoptikUaParser\DataTransferObjects;
 
-readonly class WeatherData
+readonly class WeatherPeriodData
 {
     /**
      * @param array<string, string> $data

@@ -10,7 +10,7 @@ use Dom\HTMLDocument;
 use Exception;
 use LogicException;
 use RuntimeException;
-use Vkarchevskyi\SinoptikUaParser\DataTransferObjects\WeatherData;
+use Vkarchevskyi\SinoptikUaParser\DataTransferObjects\WeatherPeriodData;
 
 readonly class Scraper
 {
@@ -33,7 +33,7 @@ readonly class Scraper
      * @throws LogicException
      * @throws RuntimeException
      */
-    public function getCurrentTimeData(): WeatherData
+    public function getCurrentTimeData(): WeatherPeriodData
     {
         $data = $this->getData();
 
@@ -41,7 +41,7 @@ readonly class Scraper
     }
 
     /**
-     * @return array<int, WeatherData>
+     * @return array<int, WeatherPeriodData>
      *
      * @throws Exception
      * @throws LogicException
@@ -78,7 +78,7 @@ readonly class Scraper
         }
 
         return array_map(
-            static fn (array $item): WeatherData => new WeatherData($item['time'], $item['data']),
+            static fn (array $item): WeatherPeriodData => new WeatherPeriodData($item['time'], $item['data']),
             $data
         );
     }
