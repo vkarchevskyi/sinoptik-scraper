@@ -15,7 +15,7 @@ A lightweight PHP library for scraping weather data from [sinoptik.ua](https://s
 You can install the library via Composer:
 
 ```bash
-composer require your-vendor/sinoptik-scraper
+composer require vkarchevskyi/sinoptik.ua-parser
 ```
 
 ## 🚀 Usage
