@@ -30,7 +30,7 @@ class SinoptikRepository
 
         curl_close($c);
 
-        if ($status !== 200) {
+        if ($status !== 200 || is_bool($html)) {
             throw new RuntimeException('Status is not successful. Current status: ' . $status);
         }
 

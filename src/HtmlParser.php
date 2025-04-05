@@ -51,7 +51,7 @@ class HtmlParser
     }
 
     /**
-     * @return list<WeatherData>
+     * @return array<int, WeatherData>
      *
      * @throws Exception
      * @throws LogicException
@@ -127,6 +127,10 @@ class HtmlParser
     protected function parsePropertyValueByTableIndex(int $index, Element $node): string
     {
         $value = $index === 5 ? $node->textContent : $node->innerHTML;
+
+        if (is_null($value)) {
+            throw new RuntimeException("Node with id $node->id must contain textContent");
+        }
 
         return match ($index) {
             0 => '', // Remove data about weather picture

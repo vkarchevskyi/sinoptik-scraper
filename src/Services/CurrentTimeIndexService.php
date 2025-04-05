@@ -6,12 +6,15 @@ namespace Vkarchevskyi\SinoptikUaParser\Services;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use RuntimeException;
 use Vkarchevskyi\SinoptikUaParser\DataTransferObjects\WeatherData;
 
 class CurrentTimeIndexService
 {
     /**
-     * @param list<WeatherData> $data
+     * @param array<int, WeatherData> $data
+     *
+     * @throws RuntimeException
      */
     public function get(array $data, DateTimeImmutable $date): int
     {
@@ -28,7 +31,12 @@ class CurrentTimeIndexService
         }
 
         asort($intervals);
+        $index = key($intervals);
 
-        return key($intervals);
+        if (!is_int($index)) {
+            throw new RuntimeException("Index must be an integer. $index given.");
+        }
+
+        return $index;
     }
 }
