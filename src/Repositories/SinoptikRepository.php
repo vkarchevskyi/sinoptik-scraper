@@ -6,7 +6,7 @@ namespace Vkarchevskyi\SinoptikUaParser\Repositories;
 
 use RuntimeException;
 
-class SinoptikRepository
+readonly class SinoptikRepository
 {
     protected const string BASE_URL = 'https://sinoptik.ua/pohoda';
 
@@ -19,7 +19,7 @@ class SinoptikRepository
 
         $c = curl_init($url);
         curl_setopt($c, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($c, CURLOPT_HEADER, 1);
+        curl_setopt($c, CURLOPT_HEADER, true);
 
         $response = curl_exec($c);
         if (curl_error($c)) {
@@ -34,8 +34,6 @@ class SinoptikRepository
         $headerSize = curl_getinfo($c, CURLINFO_HEADER_SIZE);
         $headers = substr($response, 0, $headerSize);
         $html = substr($response, $headerSize);
-
-        curl_close($c);
 
         if (stripos($headers, 'Content-Encoding: gzip') === false) {
             return $html;
