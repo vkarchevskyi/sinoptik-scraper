@@ -12,19 +12,26 @@ use LogicException;
 use RuntimeException;
 use Vkarchevskyi\SinoptikUaParser\DataTransferObjects\WeatherData;
 use Vkarchevskyi\SinoptikUaParser\DataTransferObjects\WeatherPeriodData;
+use Vkarchevskyi\SinoptikUaParser\Enums\Language;
+use Vkarchevskyi\SinoptikUaParser\Repositories\SinoptikRepository;
+use Vkarchevskyi\SinoptikUaParser\Services\CurrentTimeIndexService;
+use Vkarchevskyi\SinoptikUaParser\Services\Localization\WeatherTranslationService;
 
 readonly class Scraper
 {
-    protected Repositories\SinoptikRepository $repository;
-    protected Services\CurrentTimeIndexService $currentTimeIndexService;
+    protected SinoptikRepository $repository;
+    protected CurrentTimeIndexService $currentTimeIndexService;
+    protected WeatherTranslationService $weatherTranslationService;
 
     public function __construct(
         protected string $city,
         protected DateTimeImmutable $date,
         protected string $dateFormat,
+        protected Language $language,
     ) {
-        $this->repository = new Repositories\SinoptikRepository();
-        $this->currentTimeIndexService = new Services\CurrentTimeIndexService();
+        $this->repository = new SinoptikRepository();
+        $this->currentTimeIndexService = new CurrentTimeIndexService();
+        $this->weatherTranslationService = new WeatherTranslationService();
     }
 
     /**
@@ -48,34 +55,77 @@ readonly class Scraper
      */
     public function getData(): array
     {
-        $data = [];
+        $result = [];
 
         $dom = $this->getHtmlDocumentObjectModel();
         $timeNodes = $dom->querySelectorAll('table > thead > tr:last-child > td');
+        $weatherNodes = $dom->querySelectorAll('table > tbody > tr');
 
         /** @var Element $timeNode */
         foreach ($timeNodes as $timeNode) {
-            $data[] = ['time' => $timeNode->innerHTML, 'data' => []];
+            $weatherData = new WeatherData(
+                description: '',
+                temperature: '',
+                feelsLike: '',
+                pressure: '',
+                humidity: '',
+                wind: '',
+                precipitationProbability: '',
+            );
+            $result[] = new WeatherPeriodData($timeNode->innerHTML, $weatherData);
         }
-
-        $weatherNodes = $dom->querySelectorAll('table > tbody > tr');
 
         /** @var Element $weatherNode */
         foreach ($weatherNodes as $weatherDataIndex => $weatherNode) {
             /** @var Element $weatherDataItem */
             foreach ($weatherNode->childNodes as $timeIndex => $weatherDataItem) {
-                $value = $this->parsePropertyValueByTableIndex($weatherDataIndex, $weatherDataItem);
+                if ($weatherDataIndex === 0) {
+                    $description = $this->parsePropertyValueByTableIndex($weatherDataIndex, $weatherDataItem);
+                    $code = $this->weatherTranslationService->getCodeByUkrainianDescription($description);
+                    $description = $this->weatherTranslationService->getDescriptionByCode($code, $this->language)
+                        ?? $description;
 
-                $data[$timeIndex]['data'][$weatherDataIndex] = $value;
+                    $previousResult = $result[$timeIndex];
+                    $result[$timeIndex] = new WeatherPeriodData(
+                        $previousResult->time,
+                        new WeatherData(
+                            description: $description,
+                            temperature: $previousResult->data->temperature,
+                            feelsLike: $previousResult->data->feelsLike,
+                            pressure: $previousResult->data->pressure,
+                            humidity: $previousResult->data->humidity,
+                            wind: $previousResult->data->wind,
+                            precipitationProbability: $previousResult->data->precipitationProbability,
+                            code: $code,
+                        ),
+                    );
+                } else {
+                    $value = $this->parsePropertyValueByTableIndex($weatherDataIndex, $weatherDataItem);
+                    $key = $this->mapIndexToKey($weatherDataIndex);
+                    $result[$timeIndex] = $this->updateWeatherData($result[$timeIndex], $key, $value);
+                }
             }
         }
 
-        return array_map(
-            static fn (array $item): WeatherPeriodData => new WeatherPeriodData(
-                $item['time'],
-                new WeatherData(...$item['data']),
+        return $result;
+    }
+
+    protected function updateWeatherData(WeatherPeriodData $periodData, string $key, string $value): WeatherPeriodData
+    {
+        $data = $periodData->data;
+
+        return new WeatherPeriodData(
+            $periodData->time,
+            new WeatherData(
+                description: $key === 'description' ? $value : $data->description,
+                temperature: $key === 'temperature' ? $value : $data->temperature,
+                feelsLike: $key === 'feelsLike' ? $value : $data->feelsLike,
+                pressure: $key === 'pressure' ? $value : $data->pressure,
+                humidity: $key === 'humidity' ? $value : $data->humidity,
+                wind: $key === 'wind' ? $value : $data->wind,
+                precipitationProbability: $key === 'precipitationProbability' ? $value : $data->precipitationProbability,
+                code: $data->code,
             ),
-            $data
         );
     }
 
@@ -92,7 +142,7 @@ readonly class Scraper
     protected function parsePropertyValueByTableIndex(int $index, Element $node): string
     {
         $value = match ($index) {
-            0 => $node->querySelector('div[aria-label]')->getAttributeNode('aria-label')->textContent,
+            0 => $this->getAriaLabel($node),
             5 => $node->textContent,
             default => $node->innerHTML
         };
@@ -105,6 +155,39 @@ readonly class Scraper
             1, 2 => mb_substr($value, 0, mb_strlen($value) - 1), // Remove degree sign
             6 => $value === '-' ? '0' : $value, // Replace '-' sign with 0 (0% probability of precipitation)
             default => $value,
+        };
+    }
+
+    protected function getAriaLabel(Element $node): string
+    {
+        $element = $node->querySelector('div[aria-label]');
+        if ($element === null) {
+            throw new RuntimeException('Weather description element not found');
+        }
+
+        $attribute = $element->getAttributeNode('aria-label');
+        if ($attribute === null) {
+            throw new RuntimeException('aria-label attribute not found');
+        }
+
+        $value = $attribute->textContent;
+        if ($value === null) {
+            throw new RuntimeException('aria-label textContent is null');
+        }
+
+        return $value;
+    }
+
+    protected function mapIndexToKey(int $index): string
+    {
+        return match ($index) {
+            1 => 'temperature',
+            2 => 'feelsLike',
+            3 => 'pressure',
+            4 => 'humidity',
+            5 => 'wind',
+            6 => 'precipitationProbability',
+            default => throw new RuntimeException("Unknown weather data index: $index"),
         };
     }
 }
