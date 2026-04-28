@@ -8,6 +8,7 @@ use DateInvalidTimeZoneException;
 use DateTimeImmutable;
 use DateTimeZone;
 use LogicException;
+use Vkarchevskyi\SinoptikUaParser\Enums\Language;
 use Vkarchevskyi\SinoptikUaParser\Scraper;
 
 class ScraperFactory
@@ -17,6 +18,7 @@ class ScraperFactory
     protected string $city = 'Kyiv';
     protected string $timezone = 'Europe/Kyiv';
     protected DateTimeImmutable $date;
+    protected Language $language = Language::UA;
 
     /**
      * @throws DateInvalidTimeZoneException
@@ -30,7 +32,8 @@ class ScraperFactory
         return new Scraper(
             $this->city,
             $this->date->setTimezone(new DateTimeZone($this->timezone)),
-            self::DATE_FORMAT
+            self::DATE_FORMAT,
+            $this->language,
         );
     }
 
@@ -61,9 +64,16 @@ class ScraperFactory
         }
 
         if (!$newDate = DateTimeImmutable::createFromFormat(self::DATE_FORMAT, $date)) {
-            throw new LogicException('Incorrect date format. The format must be "' . self::DATE_FORMAT . '".');
+            throw new LogicException('Incorrect date format. The format must be "' . self::DATE_FORMAT . '". ');
         }
         $this->date = $newDate;
+
+        return $this;
+    }
+
+    public function setLanguage(Language $language): self
+    {
+        $this->language = $language;
 
         return $this;
     }

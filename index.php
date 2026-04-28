@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Vkarchevskyi\SinoptikUaParser\Enums\Language;
 use Vkarchevskyi\SinoptikUaParser\Factories\ScraperFactory;
 
 require_once __DIR__ . '/vendor/autoload.php';
@@ -19,6 +20,7 @@ $onlyCurrentTime = !empty($_REQUEST['current-time']);
 $scraper = new ScraperFactory()
     ->setCity($city)
     ->setDate($date)
+    ->setLanguage(Language::EN)
     ->make();
 
 $data = $onlyCurrentTime
