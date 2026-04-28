@@ -10,7 +10,7 @@ use Dom\HTMLDocument;
 use Exception;
 use LogicException;
 use RuntimeException;
-use Vkarchevskyi\SinoptikUaParser\DataTransferObjects\WeatherData;
+use Vkarchevskyi\SinoptikUaParser\Builders\WeatherPeriodDataBuilder;
 use Vkarchevskyi\SinoptikUaParser\DataTransferObjects\WeatherPeriodData;
 use Vkarchevskyi\SinoptikUaParser\Enums\Language;
 use Vkarchevskyi\SinoptikUaParser\Enums\WeatherProperty;
@@ -56,24 +56,15 @@ readonly class Scraper
      */
     public function getData(): array
     {
-        $result = [];
-
         $dom = $this->getHtmlDocumentObjectModel();
         $timeNodes = $dom->querySelectorAll('table > thead > tr:last-child > td');
         $weatherNodes = $dom->querySelectorAll('table > tbody > tr');
 
+        $builders = [];
+
         /** @var Element $timeNode */
         foreach ($timeNodes as $timeNode) {
-            $weatherData = new WeatherData(
-                description: '',
-                temperature: '',
-                feelsLike: '',
-                pressure: '',
-                humidity: '',
-                wind: '',
-                precipitationProbability: '',
-            );
-            $result[] = new WeatherPeriodData($timeNode->innerHTML, $weatherData);
+            $builders[] = new WeatherPeriodDataBuilder($timeNode->innerHTML);
         }
 
         /** @var Element $weatherNode */
@@ -88,46 +79,20 @@ readonly class Scraper
                     $description = $this->weatherTranslationService->getDescriptionByCode($code, $this->language)
                         ?? $description;
 
-                    $previousResult = $result[$timeIndex];
-                    $result[$timeIndex] = new WeatherPeriodData(
-                        $previousResult->time,
-                        new WeatherData(
-                            description: $description,
-                            temperature: $previousResult->data->temperature,
-                            feelsLike: $previousResult->data->feelsLike,
-                            pressure: $previousResult->data->pressure,
-                            humidity: $previousResult->data->humidity,
-                            wind: $previousResult->data->wind,
-                            precipitationProbability: $previousResult->data->precipitationProbability,
-                            code: $code,
-                        ),
-                    );
+                    $builders[$timeIndex]
+                        ->getWeatherDataBuilder()
+                        ->setDescription($description)
+                        ->setCode($code);
                 } else {
                     $value = $this->parsePropertyValueByTableIndex($property, $weatherDataItem);
-                    $result[$timeIndex] = $this->updateWeatherData($result[$timeIndex], $property, $value);
+                    $builders[$timeIndex]->getWeatherDataBuilder()->setByProperty($property, $value);
                 }
             }
         }
 
-        return $result;
-    }
-
-    protected function updateWeatherData(WeatherPeriodData $periodData, WeatherProperty $property, string $value): WeatherPeriodData
-    {
-        $data = $periodData->data;
-
-        return new WeatherPeriodData(
-            $periodData->time,
-            new WeatherData(
-                description: $property === WeatherProperty::Description ? $value : $data->description,
-                temperature: $property === WeatherProperty::Temperature ? $value : $data->temperature,
-                feelsLike: $property === WeatherProperty::FeelsLike ? $value : $data->feelsLike,
-                pressure: $property === WeatherProperty::Pressure ? $value : $data->pressure,
-                humidity: $property === WeatherProperty::Humidity ? $value : $data->humidity,
-                wind: $property === WeatherProperty::Wind ? $value : $data->wind,
-                precipitationProbability: $property === WeatherProperty::PrecipitationProbability ? $value : $data->precipitationProbability,
-                code: $data->code,
-            ),
+        return array_map(
+            static fn (WeatherPeriodDataBuilder $builder): WeatherPeriodData => $builder->make(),
+            $builders
         );
     }
 
@@ -179,5 +144,4 @@ readonly class Scraper
 
         return $value;
     }
-
 }
