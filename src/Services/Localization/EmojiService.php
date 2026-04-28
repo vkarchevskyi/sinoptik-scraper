@@ -6,17 +6,16 @@ namespace Vkarchevskyi\SinoptikUaParser\Services\Localization;
 
 final class EmojiService
 {
-    private array $data = [];
+    /** @var array<string, string> */
+    private array $data;
 
     public function __construct()
     {
-        if (empty($this->data)) {
-            $this->data = require __DIR__ . '/../../../lang/ua/weather.php';
-        }
+        $this->data = require __DIR__ . '/../../../lang/emoji.php';
     }
 
-    public function get(string $description): ?string
+    public function get(string $code): ?string
     {
-        return $this->data[$description] ?? null;
+        return $this->data[$code] ?? null;
     }
 }

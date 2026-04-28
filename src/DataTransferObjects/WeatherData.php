@@ -15,12 +15,13 @@ readonly class WeatherData
         public string $pressure,
         public string $humidity,
         public string $wind,
-        public string $precipitationProbability
+        public string $precipitationProbability,
+        public ?string $code = null,
     ) {
     }
 
-    public function getEmoji(): string
+    public function getEmoji(): ?string
     {
-        return new EmojiService()->get($this->description) ?? '';
+        return isset($this->code) ? new EmojiService()->get($this->code) : null;
     }
 }
