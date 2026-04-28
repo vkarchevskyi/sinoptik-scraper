@@ -11,7 +11,9 @@ final class EmojiService
 
     public function __construct()
     {
-        $this->data = require __DIR__ . '/../../../lang/emoji.php';
+        /** @var array<string, string> $data */
+        $data = require __DIR__ . '/../../../lang/emoji.php';
+        $this->data = $data;
     }
 
     public function get(string $code): ?string

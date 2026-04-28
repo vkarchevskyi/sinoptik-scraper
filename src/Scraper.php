@@ -13,6 +13,7 @@ use RuntimeException;
 use Vkarchevskyi\SinoptikUaParser\DataTransferObjects\WeatherData;
 use Vkarchevskyi\SinoptikUaParser\DataTransferObjects\WeatherPeriodData;
 use Vkarchevskyi\SinoptikUaParser\Enums\Language;
+use Vkarchevskyi\SinoptikUaParser\Enums\WeatherProperty;
 use Vkarchevskyi\SinoptikUaParser\Repositories\SinoptikRepository;
 use Vkarchevskyi\SinoptikUaParser\Services\CurrentTimeIndexService;
 use Vkarchevskyi\SinoptikUaParser\Services\Localization\WeatherTranslationService;
@@ -79,8 +80,10 @@ readonly class Scraper
         foreach ($weatherNodes as $weatherDataIndex => $weatherNode) {
             /** @var Element $weatherDataItem */
             foreach ($weatherNode->childNodes as $timeIndex => $weatherDataItem) {
-                if ($weatherDataIndex === 0) {
-                    $description = $this->parsePropertyValueByTableIndex($weatherDataIndex, $weatherDataItem);
+                $property = WeatherProperty::from($weatherDataIndex);
+
+                if ($property === WeatherProperty::Description) {
+                    $description = $this->parsePropertyValueByTableIndex($property, $weatherDataItem);
                     $code = $this->weatherTranslationService->getCodeByUkrainianDescription($description);
                     $description = $this->weatherTranslationService->getDescriptionByCode($code, $this->language)
                         ?? $description;
@@ -100,9 +103,8 @@ readonly class Scraper
                         ),
                     );
                 } else {
-                    $value = $this->parsePropertyValueByTableIndex($weatherDataIndex, $weatherDataItem);
-                    $key = $this->mapIndexToKey($weatherDataIndex);
-                    $result[$timeIndex] = $this->updateWeatherData($result[$timeIndex], $key, $value);
+                    $value = $this->parsePropertyValueByTableIndex($property, $weatherDataItem);
+                    $result[$timeIndex] = $this->updateWeatherData($result[$timeIndex], $property, $value);
                 }
             }
         }
@@ -110,20 +112,20 @@ readonly class Scraper
         return $result;
     }
 
-    protected function updateWeatherData(WeatherPeriodData $periodData, string $key, string $value): WeatherPeriodData
+    protected function updateWeatherData(WeatherPeriodData $periodData, WeatherProperty $property, string $value): WeatherPeriodData
     {
         $data = $periodData->data;
 
         return new WeatherPeriodData(
             $periodData->time,
             new WeatherData(
-                description: $key === 'description' ? $value : $data->description,
-                temperature: $key === 'temperature' ? $value : $data->temperature,
-                feelsLike: $key === 'feelsLike' ? $value : $data->feelsLike,
-                pressure: $key === 'pressure' ? $value : $data->pressure,
-                humidity: $key === 'humidity' ? $value : $data->humidity,
-                wind: $key === 'wind' ? $value : $data->wind,
-                precipitationProbability: $key === 'precipitationProbability' ? $value : $data->precipitationProbability,
+                description: $property === WeatherProperty::Description ? $value : $data->description,
+                temperature: $property === WeatherProperty::Temperature ? $value : $data->temperature,
+                feelsLike: $property === WeatherProperty::FeelsLike ? $value : $data->feelsLike,
+                pressure: $property === WeatherProperty::Pressure ? $value : $data->pressure,
+                humidity: $property === WeatherProperty::Humidity ? $value : $data->humidity,
+                wind: $property === WeatherProperty::Wind ? $value : $data->wind,
+                precipitationProbability: $property === WeatherProperty::PrecipitationProbability ? $value : $data->precipitationProbability,
                 code: $data->code,
             ),
         );
@@ -139,11 +141,11 @@ readonly class Scraper
         return HTMLDocument::createFromString($html);
     }
 
-    protected function parsePropertyValueByTableIndex(int $index, Element $node): string
+    protected function parsePropertyValueByTableIndex(WeatherProperty $property, Element $node): string
     {
-        $value = match ($index) {
-            0 => $this->getAriaLabel($node),
-            5 => $node->textContent,
+        $value = match ($property) {
+            WeatherProperty::Description => $this->getAriaLabel($node),
+            WeatherProperty::Wind => $node->textContent,
             default => $node->innerHTML
         };
 
@@ -151,9 +153,9 @@ readonly class Scraper
             throw new RuntimeException("Node with id $node->id must contain textContent");
         }
 
-        return match ($index) {
-            1, 2 => mb_substr($value, 0, mb_strlen($value) - 1), // Remove degree sign
-            6 => $value === '-' ? '0' : $value, // Replace '-' sign with 0 (0% probability of precipitation)
+        return match ($property) {
+            WeatherProperty::Temperature, WeatherProperty::FeelsLike => mb_substr($value, 0, mb_strlen($value) - 1), // Remove degree sign
+            WeatherProperty::PrecipitationProbability => $value === '-' ? '0' : $value, // Replace '-' sign with 0 (0% probability of precipitation)
             default => $value,
         };
     }
@@ -178,16 +180,4 @@ readonly class Scraper
         return $value;
     }
 
-    protected function mapIndexToKey(int $index): string
-    {
-        return match ($index) {
-            1 => 'temperature',
-            2 => 'feelsLike',
-            3 => 'pressure',
-            4 => 'humidity',
-            5 => 'wind',
-            6 => 'precipitationProbability',
-            default => throw new RuntimeException("Unknown weather data index: $index"),
-        };
-    }
 }
